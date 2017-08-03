@@ -41,6 +41,19 @@ fn noneify_blank_string(str: &str) -> Option<String> {
     }
 }
 
+fn noneify_blank_string_opt(str: Option<&str>) -> Option<String> {
+    match str {
+        Some(s) =>  {
+            if s.is_empty() {
+                None
+            } else {
+                Some(s.into())
+            }
+        },
+        None => None,
+    }
+}
+
 // captures indentation length in characters (for tracking nesting)
 // need to handle zero indentation
 named!(indentation<usize>,
@@ -92,11 +105,19 @@ named!(quoted_value<&str>,
     )
 );
 
+
+named!(mah_content<&str>,
+    map_res!(
+        take_till!(is_space),
+        str::from_utf8
+    )
+);
+
 named!(key_value_pair<(String, String)>,
     do_parse!(
         k: identifier >>
         tag!("=") >>
-        v: alt!( identifier | quoted_value ) >>
+        v: alt_complete!( identifier | quoted_value ) >>
         (k.into(), v.into())
     )
 );
@@ -133,17 +154,12 @@ named!(tag_element_line<LineContent>,
                 map!(element_id, |s| ClassId::Id(s.to_string()))
             )
         ) >>
-        kvps: opt!(complete!(do_parse!(
-            space >>
-            vps : many0!(ws!(key_value_pair)) >>
-            ( vps )
-        ))) >>
-        opt!(complete!(space)) >>
-        rr: rest >>
+        kvps: many0!(ws!(complete!(key_value_pair))) >>
+        rr : rest >>
         ( LineContent::Element(Element {
                 tag: Some(tag.to_string()),
                 stuff: class_ids,
-                attributes: kvps.unwrap_or(Vec::new()),
+                attributes: kvps,
                 inner_text: noneify_blank_string(rr),
 //                stuff: Vec::new(),
 //                attributes: Vec::new(),
@@ -161,17 +177,12 @@ named!(class_id_only_line<LineContent>,
                 map!(element_id, |s| ClassId::Id(s.to_string()))
             )
         ) >>
-        kvps: opt!(complete!(do_parse!(
-            space >>
-            vps : many0!(ws!(key_value_pair)) >>
-            ( vps )
-        ))) >>
-        opt!(complete!(space)) >>
-        rr: rest >>
+        kvps: many0!(ws!(complete!(key_value_pair))) >>
+        rr : rest >>
         ( LineContent::Element(Element {
                 tag: None,
                 stuff: class_ids,
-                attributes: kvps.unwrap_or(Vec::new()),
+                attributes: kvps,
                 inner_text: noneify_blank_string(rr),
           })
         )
@@ -215,8 +226,10 @@ pub struct Line {
 }
 
 pub fn lex(content:&str) -> LexResult {
-//    let r = tag_element_line("th Timeglass".as_bytes());
+//    let r = tag_element_line("a.whatever key=hoopl jack=pot".as_bytes());
 //    println!("res -> {:?}", r);
+//
+//    return Ok(Vec::new());
 
     println!("lexing content length: {:?} ", content.len());
 
