@@ -1,0 +1,8 @@
+[package]
+name = "voker"
+version = "0.1.0"
+authors = ["Michael Shaw <michaeljshaw@gmail.com>"]
+
+[dependencies]
+sass-rs = "0.2"
+templar = { path = "../templar" }
