@@ -37,7 +37,7 @@ fn is_identifier(b:u8) -> bool {
 // need to handle zero indentation
 named!(indentation<usize>,
     map_res!(
-        space,
+        take_while!(is_space),
         character_length
     )
 );
@@ -65,14 +65,6 @@ named!(rest<&str>,
     map_res!(take_while!(always), str::from_utf8)
 );
 
-named!(text<&str>,
-    do_parse!(
-        tag!("|") >>
-        rr: map!(rest, |s| s.trim() ) >>
-        (rr)
-    )
-);
-
 named!(element_class<&str>,
     do_parse!(
         tag!(".") >>
@@ -81,42 +73,79 @@ named!(element_class<&str>,
     )
 );
 
-named!(directive<&str>,
+named!(quoted_value<&str>,
+    map_res!(
+        delimited!(
+            tag!("\""),
+            take_until!("\""),
+            tag!("\"")
+        ),
+        str::from_utf8
+    )
+);
+
+named!(key_value_pair<(String, String)>,
     do_parse!(
+        k: identifier >>
         tag!("=") >>
-        rr : rest >>
-        (rr)
+        v: alt!( identifier | quoted_value ) >>
+        (k.into(), v.into())
     )
 );
 
 named!(text_line<LineContent>,
-    map!(
-        text,
-        |s| LineContent::Text(s.to_string())
+    do_parse!(
+        tag!("|") >>
+        rr: map!(rest, |s| s.trim() ) >>
+        ( LineContent::Text(rr.to_string()) )
     )
 );
 
 named!(directive_line<LineContent>,
-    map!(
-        directive,
-        |s| LineContent::Directive(s.to_string())
+    do_parse!(
+        tag!("=") >>
+        rr : rest >>
+        ( LineContent::Directive(rr.trim().to_string()) )
     )
 );
 
 named!(empty_line<LineContent>,
     do_parse!(
-        many0!(space) >>
+//        many0!(space) >>
         eof!() >>
         ( LineContent::Empty )
     )
 );
 
+named!(tag_element_line<LineContent>,
+    do_parse!(
+        tag: identifier >>
+        class_ids: many0!(
+            alt!(
+                map!(element_class, |s| ClassId::Class(s.to_string())) |
+                map!(element_id, |s| ClassId::Id(s.to_string()))
+            )
+        ) >>
+        many0!(space) >>
+        kvps: many0!(ws!(key_value_pair)) >>
+        many0!(space) >>
+        rr: rest >>
+        ( LineContent::Element(Element {
+                tag: Some(tag.to_string()),
+                stuff: class_ids,
+                attributes: kvps,
+                inner_text: Some(rr.into()),
+          })
+        )
+    )
+);
+
 named!(line_p<Line>,
     do_parse!(
-        indent: opt!(indentation) >>
-        line_content: alt!(text_line | directive_line | empty_line) >>
+        indent: indentation >>
+        line_content: alt_complete!(tag_element_line | directive_line | text_line | empty_line) >>
 
-        ( Line { indentation: indent.unwrap_or(12), content: line_content } )
+        ( Line { indentation: indent, content: line_content } )
     )
 );
 
@@ -130,12 +159,13 @@ pub enum ClassId {
 pub struct Element {
     tag: Option<String>,
     stuff: Vec<ClassId>,
+    attributes: Vec<(String, String)>,
     inner_text: Option<String>,
 }
 
 #[derive(Debug)]
 pub enum LineContent {
-    Element(String),
+    Element(Element),
     Directive(String),
     Text(String),
     Empty,
