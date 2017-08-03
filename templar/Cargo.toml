@@ -5,3 +5,4 @@ authors = ["Michael Shaw <michaeljshaw@gmail.com>"]
 
 [dependencies]
 nom = "3.2"
+colored = "1.5"

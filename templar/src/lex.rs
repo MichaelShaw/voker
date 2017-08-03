@@ -1,7 +1,7 @@
 use nom;
 use nom::*; // {digit, space, alphanumeric}
 use std::str;
-
+use colored::Colorize;
 
 pub type LexResult = Result<Vec<Line>, LexError>;
 
@@ -31,6 +31,14 @@ fn to_str(v:Vec<char>) -> String {
 fn is_identifier(b:u8) -> bool {
     let c = b as char;
     c.is_alphanumeric() || c == '-'
+}
+
+fn noneify_blank_string(str: &str) -> Option<String> {
+    if str.is_empty() {
+        None
+    }  else {
+        Some(str.into())
+    }
 }
 
 // captures indentation length in characters (for tracking nesting)
@@ -111,7 +119,6 @@ named!(directive_line<LineContent>,
 
 named!(empty_line<LineContent>,
     do_parse!(
-//        many0!(space) >>
         eof!() >>
         ( LineContent::Empty )
     )
@@ -121,20 +128,51 @@ named!(tag_element_line<LineContent>,
     do_parse!(
         tag: identifier >>
         class_ids: many0!(
-            alt!(
+            alt_complete!(
                 map!(element_class, |s| ClassId::Class(s.to_string())) |
                 map!(element_id, |s| ClassId::Id(s.to_string()))
             )
         ) >>
-        many0!(space) >>
-        kvps: many0!(ws!(key_value_pair)) >>
-        many0!(space) >>
+        kvps: opt!(complete!(do_parse!(
+            space >>
+            vps : many0!(ws!(key_value_pair)) >>
+            ( vps )
+        ))) >>
+        opt!(complete!(space)) >>
         rr: rest >>
         ( LineContent::Element(Element {
                 tag: Some(tag.to_string()),
                 stuff: class_ids,
-                attributes: kvps,
-                inner_text: Some(rr.into()),
+                attributes: kvps.unwrap_or(Vec::new()),
+                inner_text: noneify_blank_string(rr),
+//                stuff: Vec::new(),
+//                attributes: Vec::new(),
+//                inner_text: None,
+          })
+        )
+    )
+);
+
+named!(class_id_only_line<LineContent>,
+    do_parse!(
+        class_ids: many1!(
+            alt_complete!(
+                map!(element_class, |s| ClassId::Class(s.to_string())) |
+                map!(element_id, |s| ClassId::Id(s.to_string()))
+            )
+        ) >>
+        kvps: opt!(complete!(do_parse!(
+            space >>
+            vps : many0!(ws!(key_value_pair)) >>
+            ( vps )
+        ))) >>
+        opt!(complete!(space)) >>
+        rr: rest >>
+        ( LineContent::Element(Element {
+                tag: None,
+                stuff: class_ids,
+                attributes: kvps.unwrap_or(Vec::new()),
+                inner_text: noneify_blank_string(rr),
           })
         )
     )
@@ -143,8 +181,7 @@ named!(tag_element_line<LineContent>,
 named!(line_p<Line>,
     do_parse!(
         indent: indentation >>
-        line_content: alt_complete!(tag_element_line | directive_line | text_line | empty_line) >>
-
+        line_content: alt_complete!(tag_element_line | class_id_only_line | directive_line | text_line | empty_line) >>
         ( Line { indentation: indent, content: line_content } )
     )
 );
@@ -178,18 +215,28 @@ pub struct Line {
 }
 
 pub fn lex(content:&str) -> LexResult {
+//    let r = tag_element_line("th Timeglass".as_bytes());
+//    println!("res -> {:?}", r);
 
     println!("lexing content length: {:?} ", content.len());
 
     let lines = content.lines().enumerate();
 
     for (line_idx, line) in lines {
-        println!("{:?}: in -> {:?}", line_idx, line);
+
         let line_result = line_p(line.as_bytes());
+        println!("{}: in -> {}", line_idx, line);
         match line_result {
-            IResult::Done(i, o) => println!("Done-> {:?}", o),
-            IResult::Error(err) => println!("Err -> {:?}", err),
-            IResult::Incomplete(needed) => println!("Incomplete -> {:?}", needed),
+            IResult::Done(i, o) => println!("Done-> {}", format!("{:?}",o).green()),
+            IResult::Error(err) => {
+
+                println!("Err -> {}", format!("{:?}", err).red())
+            },
+            IResult::Incomplete(needed) => {
+//                println!("{}: in -> {}", line_idx, line);
+                println!("Incomplete -> {}", format!("{:?}", needed).yellow())
+            },
+            _ => (),
         }
 
 
