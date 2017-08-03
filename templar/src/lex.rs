@@ -160,7 +160,7 @@ named!(tag_element_line<LineContent>,
                 tag: Some(tag.to_string()),
                 stuff: class_ids,
                 attributes: kvps,
-                inner_text: noneify_blank_string(rr),
+                inner_text: noneify_blank_string(rr.trim()),
 //                stuff: Vec::new(),
 //                attributes: Vec::new(),
 //                inner_text: None,
@@ -183,7 +183,7 @@ named!(class_id_only_line<LineContent>,
                 tag: None,
                 stuff: class_ids,
                 attributes: kvps,
-                inner_text: noneify_blank_string(rr),
+                inner_text: noneify_blank_string(rr.trim()),
           })
         )
     )
