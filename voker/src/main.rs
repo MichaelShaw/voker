@@ -1,10 +1,6 @@
-extern crate sass_rs;
 
-fn main() {
-    println!("Hello, world!");
+extern crate voker;
 
-
-    let out = sass_rs::compile_file("resources/main.sass", sass_rs::Options::default());
-
-    println!("out -> {:?}", out);
+pub fn main() {
+    voker::run_samples();
 }
