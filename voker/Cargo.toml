@@ -6,3 +6,10 @@ authors = ["Michael Shaw <michaeljshaw@gmail.com>"]
 [dependencies]
 sass-rs = "0.2"
 templar = { path = "../templar" }
+
+[lib]
+doc = false
+
+[[bin]]
+name = "voker"
+doc = false
