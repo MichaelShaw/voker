@@ -24,3 +24,15 @@ pub fn escape_html(raw_str:&str) -> Result<String, FromUtf8Error> {
 
     String::from_utf8(allocated)
 }
+
+pub fn escape_default(raw_str:&str) -> String {
+    let mut out : Vec<char> = Vec::new();
+    for c in raw_str.chars() {
+        for ec in c.escape_default() {
+            out.push(ec);
+        }
+    }
+
+    out.into_iter().collect()
+
+}

@@ -66,7 +66,7 @@ named!(key_value_pair<&str, (String, String)>,
     do_parse!(
         k: identifier >>
         tag!("=") >>
-        v: alt_complete!( attribute_content | quoted_value ) >>
+        v: alt_complete!( quoted_value | attribute_content ) >>
         (k.into(), v.into())
     )
 );
@@ -110,13 +110,6 @@ named!(javascript_line<&str, LineContent>,
         ( LineContent::Javascript )
     )
 );
-
-//named!(empty_line<&str, LineContent>,
-//    do_parse!(
-//        eof!() >>
-//        ( LineContent::Empty )
-//    )
-//);
 
 named!(tag_element_line<&str, LineContent>,
     do_parse!(
@@ -244,10 +237,16 @@ fn element_for(html_element: HtmlElement) -> Result<Element, ErrorReason> {
         attributes.push(("class".into(), classes.join(" ")));
     }
 
+    let mut children = Vec::new();
+
+    if let Some(text) = html_element.inner_text {
+        children.push(Node::Text(text));
+    }
+
     Ok(Element {
         name,
         attributes,
-        children: Vec::new(),
+        children,
     })
 }
 
@@ -292,7 +291,7 @@ pub fn parse(content:&str) -> ParseResult {
                         (ParseMode::InlineJavascript, LineContent::Text(string)) => {
                             println!("!added some javascript content");
                             let &mut (ref mut next_down, _) = out_stack.last_mut().expect("a javascript node");
-                            next_down.children.push(Node::Text(string));
+                            next_down.children.push(Node::RawText(string));
                         },
                         (ParseMode::InlineJavascript, _) => {
                             panic!("uhh")
@@ -301,7 +300,7 @@ pub fn parse(content:&str) -> ParseResult {
                             match content {
                                 LineContent::Javascript => {
                                     println!("!javasript element, startin javascript mode");
-                                    let ele = element("script", vec![("type", "javascript")]);
+                                    let ele = element("script", vec![("type", "text/javascript")]);
                                     mode = ParseMode::InlineJavascript;
                                     out_stack.push((ele, indent));
                                 },

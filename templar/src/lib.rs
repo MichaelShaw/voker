@@ -2,8 +2,10 @@
 extern crate nom;
 extern crate colored;
 
+
 pub mod parse;
 pub mod escape;
+pub mod output;
 
 
 #[derive(Debug, Clone)]
@@ -18,6 +20,7 @@ pub enum Node {
     Doctype(String),
     Directive(String),
     Text(String),
+    RawText(String), // for javascript
     Element(Element),
 }
 

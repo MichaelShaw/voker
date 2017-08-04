@@ -19,43 +19,11 @@ pub fn run_samples() {
     match parse_result {
         Ok(nodes) => {
             println!("parse result!");
-            for node in &nodes {
-                print_ele(node, 0);
-            }
+            templar::output::write_out(nodes.as_slice(), &mut std::io::stdout() , 0);
         }
         Err(e) => {
             println!("parse error -> {:?}", e);
         }
     }
 
-}
-
-pub fn print_ele(node:&Node, indent: usize) {
-    for _ in 0..indent {
-        print!(" ");
-    }
-    match node {
-        &Node::Doctype(ref doctype) => {
-            println!("<!DOCTYPE {}>", doctype);
-        }
-        &Node::Directive(ref directive) => {
-            println!("= {}", directive);
-        }
-        &Node::Text(ref text) => {
-            println!("{}", text);
-        },
-        &Node::Element(ref element) => {
-            if element.attributes.is_empty() {
-                println!("<{}>", element.name);
-            } else {
-                let attributes : Vec<String> = element.attributes.iter().map(|&(ref k, ref v)|
-                    format!("{}=\"{}\"", k, v)
-                ).collect();
-                println!("<{} {}>", element.name, attributes.join(" "));
-            }
-            for node in &element.children {
-                print_ele(node, indent + 2);
-            }
-        },
-    }
 }
