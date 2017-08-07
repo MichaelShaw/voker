@@ -50,7 +50,7 @@ pub fn serve(config:ServerConfig) -> Result<(), Error> {
 
 pub fn serve_example() {
 
-    let addr = "127.0.0.1:1337".parse().unwrap();
+    let addr = "127.0.0.1:3000".parse().unwrap();
     let server_config = ServerConfig {
         addr: addr,
         root_dir: PathBuf::from("."),

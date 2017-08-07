@@ -11,6 +11,8 @@ extern crate hyper;
 extern crate futures;
 extern crate futures_cpupool;
 
+extern crate mime_guess;
+
 pub mod build;
 pub mod command;
 pub mod server;

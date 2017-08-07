@@ -6,5 +6,6 @@ pub fn main() {
     println!("awesome");
 
 
-    voker::server::serve_example();
+//    voker::server::serve_example();
+    voker::watch::watch_example();
 }
