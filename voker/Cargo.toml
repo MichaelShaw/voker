@@ -15,7 +15,7 @@ hyper = "0.11"
 futures = "0.1"
 futures-cpupool = "0.1"
 
-mime_guess = "1.8"
+mime_guess = "2.0.0-alpha.2"
 
 [lib]
 doc = false

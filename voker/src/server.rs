@@ -16,6 +16,8 @@ use std::io::{self, Read};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
+use mime_guess::guess_mime_type;
+
 #[derive(Clone)]
 pub struct ServerConfig {
     pub addr: SocketAddr,
@@ -122,9 +124,11 @@ impl Future for FileFuture {
                 let mut buf = Vec::new();
                 match file.read_to_end(&mut buf) {
                     Ok(_) => {
+                        let mime = guess_mime_type(&self.path);
                         Ok(Async::Ready(Response::new()
                             .with_status(StatusCode::Ok)
                             .with_header(ContentLength(buf.len() as u64))
+                            .with_header(ContentType(mime))
                             .with_body(buf)
                         ))
                     }
