@@ -1,6 +1,10 @@
 
 extern crate voker;
 
+
 pub fn main() {
-    voker::run_samples();
+    println!("awesome");
+
+
+    voker::server::serve_example();
 }

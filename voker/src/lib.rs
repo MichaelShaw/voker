@@ -1,6 +1,22 @@
 extern crate templar;
 extern crate sass_rs;
 
+#[macro_use]
+extern crate serde_derive;
+extern crate docopt;
+
+extern crate notify;
+
+extern crate hyper;
+extern crate futures;
+extern crate futures_cpupool;
+
+pub mod build;
+pub mod command;
+pub mod server;
+pub mod watch;
+
+
 use std::fs;
 use std::io::Read;
 
