@@ -3,6 +3,9 @@ use std::env;
 use std::io;
 use docopt::Docopt;
 use build;
+use server;
+use watch;
+use std::thread;
 
 const USAGE: &'static str = "
 Voker Static Site Gen
@@ -38,8 +41,39 @@ pub fn run_docopt() -> io::Result<()> {
     println!("current dir -> {:?}", current_directory);
 
     if args.cmd_serve {
-        println!("serve");
-        if let Some(name) = args.arg_name {
+        if let Some(ref name) = args.arg_name {
+            let mut source = current_directory.clone();
+            source.push(name);
+            let mut dest = current_directory.clone();
+            dest.push("_out");
+            dest.push(name);
+            println!("serve ... building -> {:?} @ {:?}", source, dest);
+
+            let server_root = dest.clone();
+            let server_join_handle = thread::spawn(|| {
+                let server_config = server::ServerConfig {
+                    addr: "127.0.0.1:3000".parse().unwrap(),
+                    root_dir: server_root,
+                    num_file_threads: 4,
+                    num_server_threads: 4,
+                };
+                server::serve(server_config);
+            });
+
+            let build_result = build::build(&source, &dest);
+            println!("initial build result -> {:?}", build_result);
+            let watcher = watch::watch(&source);
+            'fs: loop {
+                match watcher.change_events.recv() {
+                    Ok(watch::ChangeEvent{ path, op:_, cookie:_ }) => {
+                        if let Some(p) = path {
+                            let build_result = build::build(&source, &dest);
+                            println!("initial build result -> {:?}", build_result);
+                        }
+                    },
+                    Err(_) => break 'fs,
+                }
+            }
 
             // serve name
         } else {

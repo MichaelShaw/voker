@@ -34,7 +34,6 @@ impl From<templar::output::WriteError<String>> for BuildError {
     }
 }
 
-
 impl From<std::string::FromUtf8Error> for BuildError {
     fn from(err: std::string::FromUtf8Error) -> Self {
         BuildError::UTF8Error(err)
@@ -81,7 +80,7 @@ pub fn build(source: &Path, destination: &Path) -> BuildResult<()> {
                         let out_path = new_dest.with_extension("html");
                         let mut file = fs::File::create(out_path)?;
 
-                        templar::output::write_out(nodes.as_slice(), &mut file, 2, &directive_handler)?;
+                        templar::output::write_out(nodes.as_slice(), &mut file, 0, &directive_handler)?;
                         file.sync_all()?;
                     },
                     Some("sass") => {
@@ -122,7 +121,7 @@ impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
                     println!("include -> {:?}", include_path);
                     let include_nodes = parse_template(&include_path).map_err(|e| format!("{:?}", e))?;
 
-                    templar::output::write_out(include_nodes.as_slice(), writer, 2, self).map_err(|e| format!("{:?}", e))?;
+                    templar::output::write_out(include_nodes.as_slice(), writer, 0, self).map_err(|e| format!("{:?}", e))?;
 
                     Ok(())
                 } else {

@@ -79,7 +79,7 @@ named!(text_line<&str, LineContent>,
     )
 );
 
-named!(free_text_line<&str, LineContent>,
+named!(javascript_text_line<&str, LineContent>,
     do_parse!(
         rr: rest >>
         ( LineContent::Text( rr.to_string()) )
@@ -279,7 +279,7 @@ pub fn parse(content:&str) -> ParseResult {
             }
 
             let line_content_result = match mode {
-                ParseMode::InlineJavascript => free_text_line(rest),
+                ParseMode::InlineJavascript => javascript_text_line(rest),
                 ParseMode::Normal => line_p(rest)
             };
 
@@ -300,7 +300,8 @@ pub fn parse(content:&str) -> ParseResult {
                             match content {
                                 LineContent::Javascript => {
                                     println!("!javasript element, startin javascript mode");
-                                    let ele = element("script", vec![("type", "text/javascript")]);
+                                    let mut ele = element("script", vec![("type", "text/javascript")]);
+                                    ele.children.push(Node::RawText("\n".into()));
                                     mode = ParseMode::InlineJavascript;
                                     out_stack.push((ele, indent));
                                 },

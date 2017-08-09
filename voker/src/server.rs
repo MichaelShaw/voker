@@ -50,8 +50,7 @@ pub fn serve(config:ServerConfig) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn serve_example() {
-
+pub fn serve_example() -> Result<(), Error> {
     let addr = "127.0.0.1:3000".parse().unwrap();
     let server_config = ServerConfig {
         addr: addr,
@@ -60,8 +59,7 @@ pub fn serve_example() {
         num_server_threads: 4,
     };
     println!("about to serve!");
-    serve(server_config);
-
+    serve(server_config)
 }
 
 

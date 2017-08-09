@@ -1,6 +1,9 @@
+use notify;
 use notify::{RecommendedWatcher, PollWatcher, Watcher, RecursiveMode, RawEvent, FsEventWatcher};
 use std::sync::mpsc::{channel, Receiver};
 use std::path::{PathBuf, Path};
+
+pub type ChangeEvent = notify::RawEvent;
 
 pub struct FileWatcher {
     pub watcher : RecommendedWatcher,
@@ -21,7 +24,6 @@ pub fn watch(path:&Path) -> FileWatcher {
 pub fn watch_example() {
     let this_directory = PathBuf::from(".");
     let watcher = watch(this_directory.as_path());
-
 
     'fs: loop {
         match watcher.change_events.recv() {
