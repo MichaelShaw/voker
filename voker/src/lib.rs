@@ -37,11 +37,14 @@ pub fn run_samples() {
     match parse_result {
         Ok(nodes) => {
             println!("parse result!");
-            templar::output::write_out(nodes.as_slice(), &mut std::io::stdout() , 0);
+            let directive_handler = |directive:&str, out: &mut std::io::Stdout| {
+                println!("directive handler -> {:?}", directive);
+                Ok(())
+            };
+            templar::output::write_out(nodes.as_slice(), &mut std::io::stdout() , 0, &directive_handler);
         }
         Err(e) => {
             println!("parse error -> {:?}", e);
         }
     }
-
 }

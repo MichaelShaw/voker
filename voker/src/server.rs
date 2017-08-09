@@ -112,7 +112,7 @@ impl Future for ResponseFuture {
 }
 
 struct FileFuture {
-    path: PathBuf,
+    path: PathBuf, // enum of this or index !?
 }
 
 impl Future for FileFuture {
@@ -165,10 +165,10 @@ fn local_path_for_request(request_path: &str, root_dir: &Path) -> Option<PathBuf
         return None;
     }
 
-    // Maybe turn directory requests into index.html requests
-    if request_path.ends_with('/') {
-        path.push("index.html");
-    }
+//    // Maybe turn directory requests into index.html requests
+//    if request_path.ends_with('/') {
+//        path.push("index.html");
+//    }
 
     Some(path)
 }

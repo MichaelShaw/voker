@@ -4,7 +4,20 @@ use std::io::{self, Write};
 
 use escape::*;
 
-pub fn write_out<W>(nodes:&[Node], writer:&mut W, indent: usize) -> io::Result<()> where W : Write {
+pub type WriteResult<T> = Result<T, WriteError>;
+
+pub enum WriteError {
+    IO(io::Error),
+    UnregocnizedDirective(String),
+}
+
+impl From<io::Error> for WriteError {
+    fn from(err: io::Error) -> Self {
+        WriteError::IO(err)
+    }
+}
+
+pub fn write_out<W, F>(nodes:&[Node], writer:&mut W, indent: usize, f:&F) -> WriteResult<()> where W : Write, F : Fn(&str, &mut W) -> WriteResult<()> {
     for node in nodes {
         for _ in 0..indent {
             writer.write(b" ")?;
@@ -15,8 +28,7 @@ pub fn write_out<W>(nodes:&[Node], writer:&mut W, indent: usize) -> io::Result<(
                 writer.write(out.as_bytes())?;
             }
             &Node::Directive(ref directive) => {
-                let out = format!("<!--{}-->\n", directive);
-                writer.write(out.as_bytes())?;
+                f(directive, writer)?;
             }
             &Node::Text(ref text) => {
                 let out = escape_html(text).expect("escaped text");
@@ -42,7 +54,8 @@ pub fn write_out<W>(nodes:&[Node], writer:&mut W, indent: usize) -> io::Result<(
                 writer.write(open_tag.as_bytes())?;
                 writer.write(b"\n")?;
                 if has_children {
-                    write_out(element.children.as_slice(), writer, indent + 2);
+                    // , |d| { f(d) }
+                    write_out(element.children.as_slice(), writer, indent + 2, f);
                     let closing_tag : String = format!("</{}>", element.name);
                     for _ in 0..indent {
                         writer.write(b" ")?;
@@ -54,16 +67,5 @@ pub fn write_out<W>(nodes:&[Node], writer:&mut W, indent: usize) -> io::Result<(
         }
     }
 
-
-
     Ok(())
-
 }
-//
-//
-//pub fn print_ele(node:&Node, indent: usize) {
-//    for _ in 0..indent {
-//        print!(" ");
-//    }
-
-//}
