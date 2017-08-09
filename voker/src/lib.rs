@@ -20,12 +20,13 @@ pub mod watch;
 
 
 use std::fs;
+use std::io::Write;
 use std::io::Read;
 
 use templar::{Node, Element};
 
 pub fn run_samples() {
-    let mut f = fs::File::open("resources/pages/index.ace").expect(" a file");
+    let mut f = fs::File::open("resources/_head.ace").expect(" a file");
 
     let mut bytes = Vec::new();
     f.read_to_end(&mut bytes).expect("some bytes");
@@ -39,12 +40,23 @@ pub fn run_samples() {
             println!("parse result!");
             let directive_handler = |directive:&str, out: &mut std::io::Stdout| {
                 println!("directive handler -> {:?}", directive);
-                Ok(())
+                let result : Result<(), String> = Ok(());
+                result
             };
-            templar::output::write_out(nodes.as_slice(), &mut std::io::stdout() , 0, &directive_handler);
+            templar::output::write_out(nodes.as_slice(), &mut std::io::stdout() , 0, &DirectivePrinter {});
         }
         Err(e) => {
             println!("parse error -> {:?}", e);
         }
+    }
+}
+
+pub struct DirectivePrinter {}
+
+impl templar::output::DirectiveHandler for DirectivePrinter {
+    type DirectiveError = String;
+    fn handle<W>(&self, directive: &str, writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write {
+        println!("handle directive -> {:?}", directive);
+        Ok(())
     }
 }
