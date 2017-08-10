@@ -7,6 +7,8 @@ extern crate docopt;
 extern crate colored;
 extern crate notify;
 
+extern crate pad;
+
 extern crate hyper;
 extern crate futures;
 extern crate futures_cpupool;

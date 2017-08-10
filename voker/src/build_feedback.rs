@@ -4,6 +4,7 @@ use std::io;
 use build::*;
 use std::path::Path;
 use colored::Colorize;
+use pad::PadStr;
 
 //ScanDirectory,
 //Copy(PathBuf),
@@ -21,8 +22,41 @@ pub fn print_summary(path:&Path, result: io::Result<Vec<ProcessedFile>>) {
                     BuildAction::Ignore => "yellow",
                     _ => if file.result.is_ok() { "green" } else { "red" }
                 };
-                let line = format!("{:?} - {:?} - {:?}", file.source, file.action, file.result );
+                let line = format!("{:?} - {:?}", file.source, file.action);
                 println!("{}", line.color(color));
+
+                if let Some(err) = file.result.err() {
+                    match err {
+                        BuildErrorReason::IO(io) => {
+                            let line = format!("IO error {:?}", io).red();
+                            println!("{}\n", line);
+                        },
+                        BuildErrorReason::Sass(sass_reason) => {
+                            let line = format!("Sass compilation error {:?}", sass_reason).red();
+                            println!("{}\n", line);
+                        },
+                        BuildErrorReason::TemplarParse(parse_error) => {
+                            println!("Problem compiling templar template:");
+                            for (idx, c) in parse_error.context.iter().enumerate() {
+                                let line_number = parse_error.line_number - parse_error.context.len() + 2 + idx;
+                                let padded_line_number = format!("{}:", line_number).pad_to_width(5);
+                                let line = format!("{} {}", padded_line_number, c);
+                                println!("{}", line);
+                            }
+                            println!("reason -> {:?}\n", parse_error.reason);
+                        },
+                        BuildErrorReason::TemplarWrite(write_error) => {
+                            let line = format!("Templar Write Error {:?}", write_error).red();
+                            println!("{}\n", line);
+                        },
+                        BuildErrorReason::UTF8Error(utf8_error) => {
+                            let line = format!("File was not UTF8 {:?}", utf8_error).red();
+                            println!("{}\n", line);
+                        },
+                    }
+                }
+
+
             }
         }
         Err(io_error) => {
