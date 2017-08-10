@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate nom;
-extern crate colored;
-
 
 pub mod parse;
 pub mod escape;
@@ -23,6 +21,7 @@ pub enum Node {
     RawText(String), // for javascript
     Element(Element),
 }
+
 
 pub fn element(name:&str, attributes: Vec<(&str, &str)>) -> Element {
     Element {

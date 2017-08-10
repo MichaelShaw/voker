@@ -1,6 +1,5 @@
 use nom::*; // {digit, space, alphanumeric}
 use std::str;
-use colored::Colorize;
 use std::cmp::max;
 
 use contains;
@@ -295,7 +294,7 @@ pub fn parse(content:&str) -> ParseResult {
             };
 
             match line_content_result {
-                IResult::Done(i, line_content) => {
+                IResult::Done(_, line_content) => {
 //                    println!("Done-> {}", format!("{:?}",line_content).green());
 
                     match (mode, line_content) {

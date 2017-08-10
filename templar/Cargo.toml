@@ -3,9 +3,6 @@ name = "templar"
 version = "0.1.0"
 authors = ["Michael Shaw <michaeljshaw@gmail.com>"]
 
-[dependencies]
-colored = "1.5"
-
 [dependencies.nom]
 version = "3.2"
 features = ["std", "stream", "verbose-errors"]

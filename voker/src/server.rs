@@ -1,5 +1,3 @@
-use futures;
-use futures::future::FutureResult;
 use futures_cpupool::{CpuFuture, CpuPool};
 
 use hyper;
@@ -11,7 +9,6 @@ use futures::{Async, Future, Poll};
 
 use std;
 use std::error::Error as StdError;
-use std::fs;
 use std::fs::File;
 use std::io::{self, Read};
 use std::net::SocketAddr;

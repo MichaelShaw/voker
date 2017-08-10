@@ -31,7 +31,7 @@ pub enum BuildErrorReason {
     IO(io::Error),
     Sass(String),
     TemplarParse(templar::parse::ParseError),
-    TemplarWrite(templar::output::WriteError<String>),
+    TemplarWrite(templar::output::WriteError<DirectiveError>),
     UTF8Error(std::string::FromUtf8Error),
 }
 
@@ -41,8 +41,8 @@ impl From<io::Error> for BuildErrorReason {
     }
 }
 
-impl From<templar::output::WriteError<String>> for BuildErrorReason {
-    fn from(err: templar::output::WriteError<String>) -> Self {
+impl From<templar::output::WriteError<DirectiveError>> for BuildErrorReason {
+    fn from(err: templar::output::WriteError<DirectiveError>) -> Self {
         BuildErrorReason::TemplarWrite(err)
     }
 }
@@ -69,8 +69,6 @@ pub fn build_path(path:&Path) -> bool {
 }
 
 pub fn build(source: &Path, destination: &Path) -> io::Result<Vec<ProcessedFile>> {
-    println!("building {:?} -> {:?}", source, destination);
-
     fs::create_dir_all(destination)?;
 
     let paths = read_directory_paths(source)?;
@@ -139,7 +137,7 @@ pub fn compile_templar(base_directory:&Path, source:&Path, destination:&Path) ->
 
     let nodes = parse_template(source)?;
     let out_path = destination.with_extension("html");
-    let mut file = fs::File::create(destination)?;
+    let mut file = fs::File::create(out_path)?;
 
     templar::output::write_out(nodes.as_slice(), &mut file, 0, &directive_handler)?;
     file.sync_all()?;
@@ -149,7 +147,7 @@ pub fn compile_templar(base_directory:&Path, source:&Path, destination:&Path) ->
 
 pub fn compile_sass(source:&Path, destination:&Path) -> Result<(), BuildErrorReason> {
     let out = sass_rs::compile_file(source, sass_rs::Options::default()).map_err(BuildErrorReason::Sass)?;
-    let wr = write_to_path(&out, destination.with_extension("css").as_path())?;
+    write_to_path(&out, destination.with_extension("css").as_path())?;
     Ok(())
 }
 
@@ -157,11 +155,16 @@ struct TemplarDirectiveHandler {
     pub current_directory: PathBuf,
 }
 
-impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
-    type DirectiveError = String;
+#[derive(Debug)]
+pub struct DirectiveError {
+    pub directive: String,
+    pub reason: String
+}
 
-    fn handle<W>(&self, directive: &str, writer: &mut W) -> Result<(), String> where W : Write {
-        println!("handle directive -> {:?}", directive);
+impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
+    type DirectiveError = DirectiveError;
+
+    fn handle<W>(&self, directive: &str, writer: &mut W) -> Result<(), DirectiveError> where W : Write {
         let parts : Vec<_> = directive.split(" ").collect();
         match parts.first() {
             Some(&"include") => {
@@ -169,20 +172,39 @@ impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
                     let mut include_path = self.current_directory.clone();
                     include_path.push(second);
                     include_path.set_extension("ace");
-                    println!("include -> {:?}", include_path);
-                    let include_nodes = parse_template(&include_path).map_err(|e| format!("{:?}", e))?;
 
-                    templar::output::write_out(include_nodes.as_slice(), writer, 0, self).map_err(|e| format!("{:?}", e))?;
+                    let include_nodes = parse_template(&include_path).map_err(|e| {
+                        DirectiveError {
+                            directive: directive.to_string(),
+                            reason: format!("{:?}", e)
+                        }
+                    })?;
 
-                    Ok(())
+                    templar::output::write_out(include_nodes.as_slice(), writer, 0, self).map_err(|e| {
+                        DirectiveError {
+                            directive: directive.to_string(),
+                            reason: format!("{:?}", e)
+                        }
+                    })
                 } else {
-                    Err(format!("unrecognized directive -> {:?}", directive))
+                    Err(DirectiveError {
+                        directive: directive.to_string(),
+                        reason: "unrecognized".to_string(),
+                    })
                 }
             },
             Some(&"doctype") => {
-                writer.write_all(b"<!DOCTYPE html>").map_err(|e|String::from("couldnt write"))
+                writer.write_all(b"<!DOCTYPE html>").map_err(|_| DirectiveError {
+                    directive: directive.to_string(),
+                    reason: "couldnt write doctype".to_string(),
+                })
             },
-            _ => Err(format!("unrecognized directive -> {:?}", directive))
+            _ => {
+                Err(DirectiveError {
+                    directive: directive.to_string(),
+                    reason: "unrecognized".to_string(),
+                })
+            }
         }
     }
 }

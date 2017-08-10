@@ -1,5 +1,5 @@
 use notify;
-use notify::{RecommendedWatcher, PollWatcher, Watcher, RecursiveMode, RawEvent, FsEventWatcher};
+use notify::{RecommendedWatcher, Watcher, RecursiveMode, RawEvent};
 use std::sync::mpsc::{channel, Receiver};
 use std::path::{PathBuf, Path};
 

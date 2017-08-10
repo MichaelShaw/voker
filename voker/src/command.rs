@@ -5,6 +5,7 @@ use docopt::Docopt;
 use build;
 use server;
 use watch;
+use build_feedback;
 use std::thread;
 
 const USAGE: &'static str = "
@@ -38,7 +39,7 @@ pub fn run_docopt() -> io::Result<()> {
 
     let current_directory = env::current_dir()?;
 
-    println!("current dir -> {:?}", current_directory);
+//    println!("current dir -> {:?}", current_directory);
 
     if args.cmd_serve {
         if let Some(ref name) = args.arg_name {
@@ -47,28 +48,29 @@ pub fn run_docopt() -> io::Result<()> {
             let mut dest = current_directory.clone();
             dest.push("_out");
             dest.push(name);
-            println!("serve ... building -> {:?} @ {:?}", source, dest);
+//            println!("serve ... building -> {:?} @ {:?}", source, dest);
 
             let server_root = dest.clone();
-            let server_join_handle = thread::spawn(|| {
+            let _ = thread::spawn(|| {
                 let server_config = server::ServerConfig {
                     addr: "127.0.0.1:3000".parse().unwrap(),
                     root_dir: server_root,
                     num_file_threads: 4,
                     num_server_threads: 4,
                 };
-                server::serve(server_config);
+                let _ = server::serve(server_config);
             });
 
             let build_result = build::build(&source, &dest);
-            println!("initial build result -> {:?}", build_result);
+//            println!("initial build result -> {:?}", build_result);
+            build_feedback::print_summary(&source, build_result);
             let watcher = watch::watch(&source);
             'fs: loop {
                 match watcher.change_events.recv() {
                     Ok(watch::ChangeEvent{ path, op:_, cookie:_ }) => {
-                        if let Some(p) = path {
+                        if let Some(_) = path {
                             let build_result = build::build(&source, &dest);
-                            println!("initial build result -> {:?}", build_result);
+                            build_feedback::print_summary(&source, build_result);
                         }
                     },
                     Err(_) => break 'fs,
@@ -81,7 +83,7 @@ pub fn run_docopt() -> io::Result<()> {
         }
 
     } else if args.cmd_build {
-        println!("build");
+//        println!("build");
         if let Some(ref name) = args.arg_name {
             // build name
             let mut source = current_directory.clone();
@@ -90,14 +92,14 @@ pub fn run_docopt() -> io::Result<()> {
             dest.push("_out");
             dest.push(name);
             let build_result = build::build(&source, &dest);
-            println!("build result -> {:?}", build_result);
+            build_feedback::print_summary(&source, build_result);
 
         } else {
             // build all
         }
 
     } else {
-        println!("WTTTF");
+        println!("uh oh");
     }
 
     Ok(())

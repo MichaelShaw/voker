@@ -49,7 +49,7 @@ pub fn write_out<W, DH>(nodes:&[Node], writer:&mut W, indent: usize, directive_h
                 let seperate_close_tag = element.children.len() > 0 || element.name == "script" || element.name == "a";
                 let trailing_slash : &str = if !seperate_close_tag { " /" } else { " " };
 
-                println!("ele -> {:?} Close tag -> {:?} trailing slash -> {:?}", element, seperate_close_tag, trailing_slash);
+//                println!("ele -> {:?} Close tag -> {:?} trailing slash -> {:?}", element, seperate_close_tag, trailing_slash);
 
                 let open_tag : String = if element.attributes.is_empty() {
                     format!("<{}{}>", element.name, trailing_slash)
