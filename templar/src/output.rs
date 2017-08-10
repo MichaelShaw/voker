@@ -18,7 +18,7 @@ impl<DE> From<io::Error> for WriteError<DE> {
 
 pub trait DirectiveHandler {
     type DirectiveError;
-    fn handle<W>(&self, directive: &str, writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write ;
+    fn handle<W>(&self, directive: &str, writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write;
 }
 
 pub fn write_out<W, DH>(nodes:&[Node], writer:&mut W, indent: usize, directive_handler:&DH) -> Result<(), WriteError<DH::DirectiveError>>

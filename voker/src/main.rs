@@ -4,7 +4,7 @@ extern crate voker;
 
 pub fn main() {
 //    voker::run_samples();
-    voker::command::run_docopt();
+    voker::command::run_docopt().expect("success");
 
 
 }
