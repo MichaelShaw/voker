@@ -124,8 +124,6 @@ impl Future for FileFuture {
             self.path.clone()
         };
 
-
-
         match File::open(&use_path) {
             Ok(mut file) => {
                 let mut buf = Vec::new();

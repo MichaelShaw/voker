@@ -1,6 +1,7 @@
 use nom::*; // {digit, space, alphanumeric}
 use std::str;
 use colored::Colorize;
+use std::cmp::max;
 
 use contains;
 
@@ -189,7 +190,8 @@ pub type ParseResult = Result<Vec<Node>, ParseError>;
 
 #[derive(Debug)]
 pub struct ParseError {
-    pub line: usize,
+    pub line_number: usize,
+    pub context: Vec<String>, // last few lines
     pub character: Option<u64>,
     pub reason:ErrorReason,
 }
@@ -198,7 +200,7 @@ pub struct ParseError {
 pub enum ErrorReason {
     MisplacedDocType,
     MultipleIds,
-    Parse,
+    Parse(String),
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
@@ -257,22 +259,31 @@ pub fn parse(content:&str) -> ParseResult {
 
     let mut mode = ParseMode::Normal;
 
-    for (line_idx, line) in content.lines().enumerate() {
+    let lines : Vec<String> = content.lines().map(|s|s.to_string()).collect();
+
+    let produce_context = |line_number: usize| -> Vec<String> {
+        let start_line = max(line_number as i64 - 2, 0) as usize;
+        let end_line = line_number + 1;
+        let ter = &lines[start_line..end_line];
+        ter.iter().cloned().collect()
+    };
+
+    for (line_idx, line) in lines.iter().enumerate() {
         // indentation and slicing first
-        println!("-> {}", line);
+//        println!("-> {}", line);
         if let Some(indent) = indentation(line) {
             let (_, rest) = line.split_at(indent);
 
-            println!("!indent is {:?}", indent);
+//            println!("!indent is {:?}", indent);
 
             while contains(out_stack.last(), |&&(_, n)| n >= indent ) {
                 let (ele, _) = out_stack.pop().expect("the top element");
 
                 if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
-                    println!("! push top element {:?} to next down {:?}", ele.name, next_down.name);
+//                    println!("! push top element {:?} to next down {:?}", ele.name, next_down.name);
                     next_down.children.push(Node::Element(ele));
                 } else {
-                    println!("! push top element {:?} to out", ele.name);
+//                    println!("! push top element {:?} to out", ele.name);
                     out_nodes.push(Node::Element(ele));
                 }
                 mode = ParseMode::Normal
@@ -285,11 +296,11 @@ pub fn parse(content:&str) -> ParseResult {
 
             match line_content_result {
                 IResult::Done(i, line_content) => {
-                    println!("Done-> {}", format!("{:?}",line_content).green());
+//                    println!("Done-> {}", format!("{:?}",line_content).green());
 
                     match (mode, line_content) {
                         (ParseMode::InlineJavascript, LineContent::Text(string)) => {
-                            println!("!added some javascript content");
+//                            println!("!added some javascript content");
                             let &mut (ref mut next_down, _) = out_stack.last_mut().expect("a javascript node");
                             next_down.children.push(Node::RawText(string));
                         },
@@ -299,7 +310,7 @@ pub fn parse(content:&str) -> ParseResult {
                         (ParseMode::Normal, content) => {
                             match content {
                                 LineContent::Javascript => {
-                                    println!("!javasript element, startin javascript mode");
+//                                    println!("!javasript element, startin javascript mode");
                                     let mut ele = element("script", vec![("type", "text/javascript")]);
                                     ele.children.push(Node::RawText("\n".into()));
                                     mode = ParseMode::InlineJavascript;
@@ -308,23 +319,25 @@ pub fn parse(content:&str) -> ParseResult {
                                 LineContent::Doctype(string) => {
                                     if !out_stack.is_empty() {
                                         return Err(ParseError {
-                                            line: line_idx,
+                                            line_number: line_idx,
+                                            context: produce_context(line_idx),
                                             character: None,
                                             reason: ErrorReason::MisplacedDocType,
                                         });
                                     }
-                                    println!("!doctype to out");
+//                                    println!("!doctype to out");
                                     out_nodes.push(Node::Doctype(string));
                                 },
                                 LineContent::Element(ele) => {
                                     match element_for(ele) {
                                         Ok(e) => {
-                                            println!("!{}", format!("pushing element {:?}", e.name));
+//                                            println!("!{}", format!("pushing element {:?}", e.name));
                                             out_stack.push((e, indent));
                                         },
                                         Err(reason) => {
                                             return Err(ParseError {
-                                                line: line_idx,
+                                                line_number: line_idx,
+                                                context: produce_context(line_idx),
                                                 character: None,
                                                 reason,
                                             });
@@ -334,36 +347,42 @@ pub fn parse(content:&str) -> ParseResult {
                                 LineContent::Directive(string) => {
                                     let node = Node::Directive(string);
                                     if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
-                                        println!("!push directive to parent {:?}", next_down.name);
+//                                        println!("!push directive to parent {:?}", next_down.name);
                                         next_down.children.push(node);
                                     } else {
-                                        println!("!push directive to root");
+//                                        println!("!push directive to root");
                                         out_nodes.push(node);
                                     }
                                 },
                                 LineContent::Text(string) => {
                                     let node = Node::Text(string);
                                     if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
-                                        println!("!push text to parent {:?}", next_down.name);
+//                                        println!("!push text to parent {:?}", next_down.name);
                                         next_down.children.push(node);
                                     } else {
-                                        println!("!push text to root");
+//                                        println!("!push text to root");
                                         out_nodes.push(node);
                                     }
                                 },
                             }
                         },
                     }
-
-
                 },
                 IResult::Error(err) => {
-                    println!("Err -> {}", format!("{:?}", err).red());
-                    return Err(ParseError { line: line_idx, character: None, reason:ErrorReason::Parse });
+                    return Err(ParseError {
+                        line_number: line_idx,
+                        context: produce_context(line_idx),
+                        character: None,
+                        reason:ErrorReason::Parse(format!("{:?}", err)),
+                    });
                 },
                 IResult::Incomplete(needed) => {
-                    println!("Incomplete -> {}", format!("{:?}", needed).yellow());
-                    return Err(ParseError { line: line_idx, character: None, reason:ErrorReason::Parse });
+                    return Err(ParseError {
+                        line_number: line_idx,
+                        context: produce_context(line_idx),
+                        character: None,
+                        reason:ErrorReason::Parse(format!("{:?}", needed)),
+                    });
                 },
             }
         }
@@ -372,10 +391,10 @@ pub fn parse(content:&str) -> ParseResult {
     // push remainder on
     while let Some((ele, _)) = out_stack.pop() {
         if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
-            println!("!push ele {:?} to next down {:?}", ele.name, next_down.name);
+//            println!("!push ele {:?} to next down {:?}", ele.name, next_down.name);
             next_down.children.push(Node::Element(ele));
         } else {
-            println!("!push ele to root {:?}", ele.name);
+//            println!("!push ele to root {:?}", ele.name);
             out_nodes.push(Node::Element(ele));
         }
     }
