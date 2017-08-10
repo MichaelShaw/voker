@@ -1,3 +1,5 @@
 [workspace]
 members = ["voker", "templar"]
 
+[profile.release]
+lto = true

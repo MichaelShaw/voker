@@ -2,6 +2,7 @@
 # will have compiled files and executables
 .idea
 **/*.DS_Store
+*.sh
 
 resources
 /target/
