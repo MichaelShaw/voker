@@ -11,6 +11,7 @@ use futures::{Async, Future, Poll};
 
 use std;
 use std::error::Error as StdError;
+use std::fs;
 use std::fs::File;
 use std::io::{self, Read};
 use std::net::SocketAddr;
@@ -117,12 +118,20 @@ impl Future for FileFuture {
     type Item = Response;
     type Error = Error;
     fn poll(&mut self) -> Poll<Response, Error> {
-        match File::open(&self.path) {
+        let use_path = if self.path.is_dir() {
+            self.path.join("index.html")
+        } else {
+            self.path.clone()
+        };
+
+
+
+        match File::open(&use_path) {
             Ok(mut file) => {
                 let mut buf = Vec::new();
                 match file.read_to_end(&mut buf) {
                     Ok(_) => {
-                        let mime = guess_mime_type(&self.path);
+                        let mime = guess_mime_type(&use_path);
                         Ok(Async::Ready(Response::new()
                             .with_status(StatusCode::Ok)
                             .with_header(ContentLength(buf.len() as u64))
