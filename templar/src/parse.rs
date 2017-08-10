@@ -261,7 +261,7 @@ pub fn parse(content:&str) -> ParseResult {
     let lines : Vec<String> = content.lines().map(|s|s.to_string()).collect();
 
     let produce_context = |line_number: usize| -> Vec<String> {
-        let start_line = max(line_number as i64 - 2, 0) as usize;
+        let start_line = max((line_number as i64) - 5, 0) as usize;
         let end_line = line_number + 1;
         let ter = &lines[start_line..end_line];
         ter.iter().cloned().collect()

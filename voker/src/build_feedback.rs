@@ -38,7 +38,7 @@ pub fn print_summary(path:&Path, result: io::Result<Vec<ProcessedFile>>) {
                         BuildErrorReason::TemplarParse(parse_error) => {
                             println!("Problem compiling templar template:");
                             for (idx, c) in parse_error.context.iter().enumerate() {
-                                let line_number = parse_error.line_number - parse_error.context.len() + 2 + idx;
+                                let line_number = parse_error.line_number + 2 + idx - parse_error.context.len();
                                 let padded_line_number = format!("{}:", line_number).pad_to_width(5);
                                 let line = format!("{} {}", padded_line_number, c);
                                 println!("{}", line);

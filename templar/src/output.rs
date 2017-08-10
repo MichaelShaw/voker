@@ -1,5 +1,5 @@
 
-use {Node, Element};
+use {Node};
 use std::io::{self, Write};
 
 use escape::*;
