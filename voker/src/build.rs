@@ -95,9 +95,9 @@ pub fn build(source: &Path, destination: &Path) -> io::Result<Vec<ProcessedFile>
                 }
             } else {
                 let (action, result) : (BuildAction, Result<(), BuildErrorReason>) = match path.extension().and_then(|oss| oss.to_str()) {
-                    Some("ace") => {
+                    Some("tlr") => {
                         (
-                            BuildAction::Compile { extension: "ace".into(), destination: new_dest.clone() },
+                            BuildAction::Compile { extension: "tlr".into(), destination: new_dest.clone() },
                             compile_templar(source, &path, &new_dest)
                         )
                     },
@@ -203,7 +203,7 @@ impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
                 if let Some(second) = parts.get(1) {
                     let mut include_path = self.current_directory.clone();
                     include_path.push(second);
-                    include_path.set_extension("ace");
+                    include_path.set_extension("tlr");
 
                     let include_nodes = parse_template(&include_path).map_err(|e| {
                         DirectiveError {
