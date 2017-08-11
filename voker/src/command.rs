@@ -68,7 +68,6 @@ pub fn run_docopt() -> io::Result<()> {
             'fs: loop {
                 match watcher.change_events.recv() {
                     Ok(watch::ChangeEvent{ path, op:_, cookie:_ }) => {
-                        println!("change event {:?}", path);
                         if let Some(_) = path {
                             let build_result = build::build(&source, &dest);
                             build_feedback::print_summary(&source, build_result);

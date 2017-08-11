@@ -1,9 +1,8 @@
-use notify;
 use notify::{RecommendedWatcher, Watcher, RecursiveMode, RawEvent};
 use std::sync::mpsc::{channel, Receiver};
-use std::path::{PathBuf, Path};
+use std::path::{Path};
 
-pub type ChangeEvent = notify::RawEvent;
+pub type ChangeEvent = RawEvent;
 
 pub struct FileWatcher {
     pub watcher : RecommendedWatcher,
@@ -19,27 +18,4 @@ pub fn watch(path:&Path) -> FileWatcher {
         watcher: resource_file_watcher,
         change_events: notifier_rx,
     }
-}
-
-pub fn watch_example() {
-    let this_directory = PathBuf::from(".");
-    let watcher = watch(this_directory.as_path());
-
-    'fs: loop {
-        match watcher.change_events.recv() {
-            Ok(RawEvent { path, op:_, cookie:_ }) => {
-                if let Some(p) = path {
-                    use std::path;
-                    let components: Vec<path::Component> = p.components().collect();
-                    println!("fs event {:?} -> {:?}", p, components);
-
-                }
-            },
-            Err(_) => break 'fs,
-        }
-    }
-
-
-
-
 }
