@@ -19,6 +19,7 @@ pub fn print_summary(path:&Path, result: io::Result<Vec<ProcessedFile>>) {
         Ok(files) => {
             for file in files {
                 let color = match file.action {
+                    BuildAction::Skip => "magenta",
                     BuildAction::Ignore => "yellow",
                     _ => if file.result.is_ok() { "green" } else { "red" }
                 };

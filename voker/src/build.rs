@@ -4,8 +4,9 @@ use std::path::{Path, PathBuf};
 use std;
 use std::fs;
 use std::io;
-use std::io::Write;
-use std::io::Read;
+use std::io::{Write, Read};
+use filetime::{FileTime, set_file_times};
+
 
 use templar;
 
@@ -21,6 +22,7 @@ pub struct ProcessedFile {
 pub enum BuildAction {
     ScanDirectory,
     Copy(PathBuf),
+    Skip, // no change
     Ignore,
     Compile { extension: String, destination: PathBuf },
 }
@@ -106,13 +108,17 @@ pub fn build(source: &Path, destination: &Path) -> io::Result<Vec<ProcessedFile>
                         )
                     },
                     _ => {
-                        (
-                            BuildAction::Copy(new_dest.clone()),
-                            match fs::copy(&path, new_dest) {
-                                Ok(_) => Ok(()),
-                                Err(io) => Err(BuildErrorReason::IO(io)),
-                            }
-                        )
+                        if same_attributes(&path, &new_dest) {
+                            (BuildAction::Skip, Ok(()))
+                        } else {
+                            (
+                                BuildAction::Copy(new_dest.clone()),
+                                match copy_maintaining_modified_time(&path, &new_dest) {
+                                    Ok(_) => Ok(()),
+                                    Err(io) => Err(BuildErrorReason::IO(io)),
+                                }
+                            )
+                        }
                     }
                 };
 
@@ -130,6 +136,32 @@ pub fn build(source: &Path, destination: &Path) -> io::Result<Vec<ProcessedFile>
             }]
         }
     }).collect())
+}
+
+pub fn copy_maintaining_modified_time(source:&Path, dest:&Path) -> io::Result<()> {
+    fs::copy(source, dest).and_then(|_|
+        fs::metadata(source)
+    ).and_then(|metadata| {
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        let atime = FileTime::from_last_access_time(&metadata);
+        set_file_times(dest, atime, mtime)
+    })
+}
+
+pub fn same_attributes(a: &Path, b:&Path) -> bool {
+    if a.exists() && b.exists() {
+        let a_meta = a.metadata();
+        let b_meta = b.metadata();
+        if let (Some(a_md), Some(b_md)) = (a_meta.ok(), b_meta.ok()) {
+            let a_time = FileTime::from_last_modification_time(&a_md);
+            let b_time = FileTime::from_last_modification_time(&b_md);
+            a_time == b_time && a_md.len() == b_md.len()
+        } else {
+            false
+        }
+    } else {
+        false
+    }
 }
 
 pub fn compile_templar(base_directory:&Path, source:&Path, destination:&Path) -> Result<(), BuildErrorReason> {
