@@ -361,20 +361,7 @@ pub fn parse(content:&str) -> ParseResult {
                                 },
                                 LineContent::Directive(string) => {
                                     let node = Node::Directive { command: string, children: Vec::new() };
-                                    if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
-//                                        println!("!push directive to parent {:?}", next_down.name);
-                                        if !next_down.append_child(node.clone()) {
-                                            return Err(ParseError {
-                                                line_number: line_idx,
-                                                context: produce_context(line_idx),
-                                                character: None,
-                                                reason: ErrorReason::IllegalNesting(format!("parent -> {:?} child -> {:?}", next_down, node)),
-                                            });
-                                        }
-                                    } else {
-//                                        println!("!push directive to root");
-                                        out_nodes.push(node);
-                                    }
+                                    out_stack.push((node, indent));
                                 },
                                 LineContent::Text(string) => {
                                     let node = Node::Text(string);
@@ -421,7 +408,7 @@ pub fn parse(content:&str) -> ParseResult {
     while let Some((node, _)) = out_stack.pop() {
         if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
 //            println!("!push ele {:?} to next down {:?}", ele.name, next_down.name);
-            if next_down.append_child(node.clone()) {
+            if !next_down.append_child(node.clone()) {
                 return Err(ParseError {
                     line_number: 0,
                     context: vec![],

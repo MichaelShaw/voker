@@ -34,6 +34,7 @@ pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, 
                 writer.write(out.as_bytes())?;
             }
             &Node::Directive { ref command, ref children } => {
+                println!("handle directive -> {:?} children {:?}", command, children);
                 directive_handler.handle(context, command, children, writer).map_err(WriteError::DirectiveError)?;
             }
             &Node::Text(ref text) => {
@@ -48,7 +49,7 @@ pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, 
             },
             &Node::Element(ref element) => {
                 let seperate_close_tag = element.children.len() > 0 || element.name == "script" || element.name == "a";
-                let trailing_slash : &str = if !seperate_close_tag { " /" } else { " " };
+                let trailing_slash : &str = if !seperate_close_tag { " /" } else { "" };
 
 //                println!("ele -> {:?} Close tag -> {:?} trailing slash -> {:?}", element, seperate_close_tag, trailing_slash);
 
