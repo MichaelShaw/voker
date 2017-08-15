@@ -199,6 +199,7 @@ pub struct ParseError {
 pub enum ErrorReason {
     MisplacedDocType,
     MultipleIds,
+    IllegalNesting(String),
     Parse(String),
 }
 
@@ -254,7 +255,7 @@ fn element_for(html_element: HtmlElement) -> Result<Element, ErrorReason> {
 
 pub fn parse(content:&str) -> ParseResult {
     let mut out_nodes: Vec<Node> = Vec::new();
-    let mut out_stack: Vec<(Element, usize)> = Vec::new();
+    let mut out_stack: Vec<(Node, usize)> = Vec::new();
 
     let mut mode = ParseMode::Normal;
 
@@ -276,14 +277,21 @@ pub fn parse(content:&str) -> ParseResult {
 //            println!("!indent is {:?}", indent);
 
             while contains(out_stack.last(), |&&(_, n)| n >= indent ) {
-                let (ele, _) = out_stack.pop().expect("the top element");
+                let (node, _) = out_stack.pop().expect("the top element");
 
                 if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
 //                    println!("! push top element {:?} to next down {:?}", ele.name, next_down.name);
-                    next_down.children.push(Node::Element(ele));
+                    if !next_down.append_child(node.clone()) {
+                        return Err(ParseError {
+                            line_number: line_idx,
+                            context: produce_context(line_idx),
+                            character: None,
+                            reason: ErrorReason::IllegalNesting(format!("parent -> {:?} child -> {:?}", next_down, node)),
+                        });
+                    }
                 } else {
 //                    println!("! push top element {:?} to out", ele.name);
-                    out_nodes.push(Node::Element(ele));
+                    out_nodes.push(node);
                 }
                 mode = ParseMode::Normal
             }
@@ -301,7 +309,15 @@ pub fn parse(content:&str) -> ParseResult {
                         (ParseMode::InlineJavascript, LineContent::Text(string)) => {
 //                            println!("!added some javascript content");
                             let &mut (ref mut next_down, _) = out_stack.last_mut().expect("a javascript node");
-                            next_down.children.push(Node::RawText(string));
+                            let node = Node::RawText(string);
+                            if !next_down.append_child(node.clone()) {
+                                return Err(ParseError {
+                                    line_number: line_idx,
+                                    context: produce_context(line_idx),
+                                    character: None,
+                                    reason: ErrorReason::IllegalNesting(format!("parent -> {:?} child -> {:?}", next_down, node)),
+                                });
+                            }
                         },
                         (ParseMode::InlineJavascript, _) => {
                             panic!("uhh")
@@ -313,7 +329,7 @@ pub fn parse(content:&str) -> ParseResult {
                                     let mut ele = element("script", vec![("type", "text/javascript")]);
                                     ele.children.push(Node::RawText("\n".into()));
                                     mode = ParseMode::InlineJavascript;
-                                    out_stack.push((ele, indent));
+                                    out_stack.push((Node::Element(ele), indent));
                                 },
                                 LineContent::Doctype(string) => {
                                     if !out_stack.is_empty() {
@@ -331,7 +347,7 @@ pub fn parse(content:&str) -> ParseResult {
                                     match element_for(ele) {
                                         Ok(e) => {
 //                                            println!("!{}", format!("pushing element {:?}", e.name));
-                                            out_stack.push((e, indent));
+                                            out_stack.push((Node::Element(e), indent));
                                         },
                                         Err(reason) => {
                                             return Err(ParseError {
@@ -344,10 +360,17 @@ pub fn parse(content:&str) -> ParseResult {
                                     }
                                 },
                                 LineContent::Directive(string) => {
-                                    let node = Node::Directive(string);
+                                    let node = Node::Directive { command: string, children: Vec::new() };
                                     if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
 //                                        println!("!push directive to parent {:?}", next_down.name);
-                                        next_down.children.push(node);
+                                        if !next_down.append_child(node.clone()) {
+                                            return Err(ParseError {
+                                                line_number: line_idx,
+                                                context: produce_context(line_idx),
+                                                character: None,
+                                                reason: ErrorReason::IllegalNesting(format!("parent -> {:?} child -> {:?}", next_down, node)),
+                                            });
+                                        }
                                     } else {
 //                                        println!("!push directive to root");
                                         out_nodes.push(node);
@@ -357,7 +380,14 @@ pub fn parse(content:&str) -> ParseResult {
                                     let node = Node::Text(string);
                                     if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
 //                                        println!("!push text to parent {:?}", next_down.name);
-                                        next_down.children.push(node);
+                                        if !next_down.append_child(node.clone()) {
+                                            return Err(ParseError {
+                                                line_number: line_idx,
+                                                context: produce_context(line_idx),
+                                                character: None,
+                                                reason: ErrorReason::IllegalNesting(format!("parent -> {:?} child -> {:?}", next_down, node)),
+                                            });
+                                        }
                                     } else {
 //                                        println!("!push text to root");
                                         out_nodes.push(node);
@@ -388,13 +418,20 @@ pub fn parse(content:&str) -> ParseResult {
     }
 
     // push remainder on
-    while let Some((ele, _)) = out_stack.pop() {
+    while let Some((node, _)) = out_stack.pop() {
         if let Some(&mut (ref mut next_down, _)) = out_stack.last_mut() {
 //            println!("!push ele {:?} to next down {:?}", ele.name, next_down.name);
-            next_down.children.push(Node::Element(ele));
+            if next_down.append_child(node.clone()) {
+                return Err(ParseError {
+                    line_number: 0,
+                    context: vec![],
+                    character: None,
+                    reason: ErrorReason::IllegalNesting(format!("parent -> {:?} child -> {:?}", next_down, node)),
+                });
+            }
         } else {
 //            println!("!push ele to root {:?}", ele.name);
-            out_nodes.push(Node::Element(ele));
+            out_nodes.push(node);
         }
     }
 

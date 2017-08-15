@@ -16,10 +16,35 @@ pub struct Element {
 #[derive(Debug, Clone)]
 pub enum Node {
     Doctype(String),
-    Directive(String),
+    Directive { command: String, children: Vec<Node> },
     Text(String),
     RawText(String), // for javascript
     Element(Element),
+}
+
+impl Node {
+    pub fn supports_children(&self) -> bool {
+        match self {
+            &Node::Directive { .. } | &Node::Element(_) => true,
+            &Node::Doctype(_) | &Node::Text(_) | &Node::RawText(_) => false,
+        }
+    }
+
+    pub fn append_child(&mut self, node:Node) -> bool {
+        match self {
+            &mut Node::Doctype(_) => false,
+            &mut Node::Directive { ref mut children, .. } => {
+                children.push(node);
+                true
+            },
+            &mut Node::Text(_) => false,
+            &mut Node::RawText(_) => false, // for javascript
+            &mut Node::Element(ref mut ele) => {
+                ele.children.push(node);
+                true
+            },
+        }
+    }
 }
 
 

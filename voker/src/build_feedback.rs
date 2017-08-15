@@ -15,9 +15,20 @@ pub fn print_summary(path:&Path, result: io::Result<Vec<ProcessedFile>>) {
     let l = format!("\n\n\nBuilding {:?}\n", path);
     println!("{}", l.cyan());
 
+
+
     match result {
         Ok(files) => {
-            for file in files {
+            let contains_errors = files.iter().any(|f| f.result.is_err());
+
+            let use_files = if contains_errors {
+                files.into_iter().filter(|f| f.result.is_err()).collect()
+            } else {
+                files
+            };
+
+
+            for file in use_files {
                 let color = match file.action {
                     BuildAction::Skip => "magenta",
                     BuildAction::Ignore => "yellow",

@@ -32,8 +32,8 @@ pub fn write_out<W, DH>(nodes:&[Node], writer:&mut W, indent: usize, directive_h
                 let out = format!("<!DOCTYPE {}>\n", doctype);
                 writer.write(out.as_bytes())?;
             }
-            &Node::Directive(ref directive) => {
-                directive_handler.handle(directive, writer).map_err(WriteError::DirectiveError)?;
+            &Node::Directive { ref command, ref children } => {
+                directive_handler.handle(command, writer).map_err(WriteError::DirectiveError)?;
             }
             &Node::Text(ref text) => {
 //                let out = escape_html(text).expect("escaped text");
