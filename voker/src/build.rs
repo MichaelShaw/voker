@@ -9,7 +9,7 @@ use filetime::{FileTime, set_file_times};
 
 
 use templar;
-
+use templar::{TemplateContext, Node};
 
 #[derive(Debug)]
 pub struct ProcessedFile {
@@ -171,7 +171,9 @@ pub fn compile_templar(base_directory:&Path, source:&Path, destination:&Path) ->
     let out_path = destination.with_extension("html");
     let mut file = fs::File::create(out_path)?;
 
-    templar::output::write_out(nodes.as_slice(), &mut file, 0, &directive_handler)?;
+    let empty_context = TemplateContext::empty();
+
+    templar::output::write_out(nodes.as_slice(), &empty_context, &mut file, 0, &directive_handler)?;
     file.sync_all()?;
 
     Ok(())
@@ -196,9 +198,17 @@ pub struct DirectiveError {
 impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
     type DirectiveError = DirectiveError;
 
-    fn handle<W>(&self, directive: &str, writer: &mut W) -> Result<(), DirectiveError> where W : Write {
-        let parts : Vec<_> = directive.split(" ").collect();
+    fn handle<W>(&self, context:&TemplateContext, command: &str, children: &[Node], writer: &mut W) -> Result<(), DirectiveError> where W : Write {
+        let parts : Vec<_> = command.split(" ").collect();
         match parts.first() {
+            Some(&"yield") => {
+                templar::output::write_out(context.nodes.as_slice(), &context, writer, 0, self).map_err(|e| {
+                    DirectiveError {
+                        directive: command.to_string(),
+                        reason: format!("{:?}", e)
+                    }
+                })
+            },
             Some(&"include") => {
                 if let Some(second) = parts.get(1) {
                     let mut include_path = self.current_directory.clone();
@@ -207,33 +217,37 @@ impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
 
                     let include_nodes = parse_template(&include_path).map_err(|e| {
                         DirectiveError {
-                            directive: directive.to_string(),
+                            directive: command.to_string(),
                             reason: format!("{:?}", e)
                         }
                     })?;
 
-                    templar::output::write_out(include_nodes.as_slice(), writer, 0, self).map_err(|e| {
+                    let context = TemplateContext {
+                        nodes: children.iter().cloned().collect(),
+                    };
+
+                    templar::output::write_out(include_nodes.as_slice(), &context, writer, 0, self).map_err(|e| {
                         DirectiveError {
-                            directive: directive.to_string(),
+                            directive: command.to_string(),
                             reason: format!("{:?}", e)
                         }
                     })
                 } else {
                     Err(DirectiveError {
-                        directive: directive.to_string(),
+                        directive: command.to_string(),
                         reason: "unrecognized".to_string(),
                     })
                 }
             },
             Some(&"doctype") => {
                 writer.write_all(b"<!DOCTYPE html>").map_err(|_| DirectiveError {
-                    directive: directive.to_string(),
+                    directive: command.to_string(),
                     reason: "couldnt write doctype".to_string(),
                 })
             },
             _ => {
                 Err(DirectiveError {
-                    directive: directive.to_string(),
+                    directive: command.to_string(),
                     reason: "unrecognized".to_string(),
                 })
             }

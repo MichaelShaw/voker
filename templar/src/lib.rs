@@ -59,3 +59,17 @@ pub fn element(name:&str, attributes: Vec<(&str, &str)>) -> Element {
 pub fn contains<T, F>(opt: Option<T>, f: F) -> bool where F: Fn(&T) -> bool {
     opt.iter().any(f)
 }
+
+
+#[derive(Debug)]
+pub struct TemplateContext {
+    pub nodes:Vec<Node>,
+}
+
+impl TemplateContext {
+    pub fn empty() -> TemplateContext {
+        TemplateContext {
+            nodes: Vec::new()
+        }
+    }
+}

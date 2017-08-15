@@ -1,5 +1,5 @@
 
-use {Node};
+use {Node, TemplateContext};
 use std::io::{self, Write};
 
 use escape::*;
@@ -16,12 +16,13 @@ impl<DE> From<io::Error> for WriteError<DE> {
     }
 }
 
+
 pub trait DirectiveHandler {
     type DirectiveError;
-    fn handle<W>(&self, directive: &str, writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write;
+    fn handle<W>(&self, context:&TemplateContext, command: &str, children: &[Node], writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write;
 }
 
-pub fn write_out<W, DH>(nodes:&[Node], writer:&mut W, indent: usize, directive_handler:&DH) -> Result<(), WriteError<DH::DirectiveError>>
+pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, indent: usize, directive_handler:&DH) -> Result<(), WriteError<DH::DirectiveError>>
     where W : Write, DH: DirectiveHandler {
     for node in nodes {
 //        for _ in 0..indent {
@@ -33,7 +34,7 @@ pub fn write_out<W, DH>(nodes:&[Node], writer:&mut W, indent: usize, directive_h
                 writer.write(out.as_bytes())?;
             }
             &Node::Directive { ref command, ref children } => {
-                directive_handler.handle(command, writer).map_err(WriteError::DirectiveError)?;
+                directive_handler.handle(context, command, children, writer).map_err(WriteError::DirectiveError)?;
             }
             &Node::Text(ref text) => {
 //                let out = escape_html(text).expect("escaped text");
@@ -61,7 +62,7 @@ pub fn write_out<W, DH>(nodes:&[Node], writer:&mut W, indent: usize, directive_h
                 };
                 writer.write(open_tag.as_bytes())?;
                 if seperate_close_tag {
-                    write_out(element.children.as_slice(), writer, indent + 2, directive_handler)?;
+                    write_out(element.children.as_slice(), context, writer, indent + 2, directive_handler)?;
                     let closing_tag : String = format!("</{}>", element.name);
 //                    for _ in 0..indent {
 //                        writer.write(b" ")?;

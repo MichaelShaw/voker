@@ -21,6 +21,7 @@ pub mod server;
 pub mod watch;
 pub mod build_feedback;
 
+use templar::{TemplateContext, Node};
 
 use std::io::Write;
 
@@ -29,8 +30,8 @@ pub struct DirectivePrinter {}
 
 impl templar::output::DirectiveHandler for DirectivePrinter {
     type DirectiveError = String;
-    fn handle<W>(&self, directive: &str, _: &mut W) -> Result<(), Self::DirectiveError> where W : Write {
-        println!("handle directive -> {:?}", directive);
+    fn handle<W>(&self, context: &TemplateContext, command: &str, children: &[Node], _: &mut W) -> Result<(), Self::DirectiveError> where W : Write {
+        println!("handle directive -> {:?}, children -> {:?}", command, children.len());
         Ok(())
     }
 }
