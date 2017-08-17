@@ -24,8 +24,6 @@ fn noneify_blank_string(str: &str) -> Option<String> {
     }
 }
 
-// captures indentation length in characters (for tracking nesting)
-// need to handle zero indentation
 named!(identifier<&str, &str>,
     take_while1!(is_identifier)
 );
