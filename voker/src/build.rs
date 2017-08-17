@@ -173,7 +173,7 @@ pub fn compile_templar(base_directory:&Path, source:&Path, destination:&Path) ->
 
     let empty_context = TemplateContext::empty();
 
-    templar::output::write_out(nodes.as_slice(), &empty_context, &mut file, 0, &directive_handler)?;
+    templar::output::write_out(nodes.as_slice(), &empty_context, &mut file, 0, 2, &directive_handler)?;
     file.sync_all()?;
 
     Ok(())
@@ -198,11 +198,11 @@ pub struct DirectiveError {
 impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
     type DirectiveError = DirectiveError;
 
-    fn handle<W>(&self, context:&TemplateContext, command: &str, children: &[Node], writer: &mut W) -> Result<(), DirectiveError> where W : Write {
+    fn handle<W>(&self, context:&TemplateContext, command: &str, children: &[Node], base_indent:usize, indent_size: usize, writer: &mut W) -> Result<(), DirectiveError> where W : Write {
         let parts : Vec<_> = command.split(" ").collect();
         match parts.first() {
             Some(&"yield") => {
-                templar::output::write_out(context.nodes.as_slice(), &context, writer, 0, self).map_err(|e| {
+                templar::output::write_out(context.nodes.as_slice(), &context, writer, base_indent, indent_size, self).map_err(|e| {
                     DirectiveError {
                         directive: command.to_string(),
                         reason: format!("{:?}", e)
@@ -226,7 +226,7 @@ impl templar::output::DirectiveHandler for TemplarDirectiveHandler {
                         nodes: children.iter().cloned().collect(),
                     };
 
-                    templar::output::write_out(include_nodes.as_slice(), &context, writer, 0, self).map_err(|e| {
+                    templar::output::write_out(include_nodes.as_slice(), &context, writer, base_indent, indent_size, self).map_err(|e| {
                         DirectiveError {
                             directive: command.to_string(),
                             reason: format!("{:?}", e)

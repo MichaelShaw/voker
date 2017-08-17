@@ -23,6 +23,13 @@ pub enum Node {
 }
 
 impl Node {
+    pub fn should_indent(&self) -> bool {
+        match self {
+            &Node::Element(_) | &Node::Text(_) | &Node::Doctype(_) => true,
+            &Node::Directive { .. } | &Node::RawText(_) => false,
+        }
+    }
+
     pub fn supports_children(&self) -> bool {
         match self {
             &Node::Directive { .. } | &Node::Element(_) => true,

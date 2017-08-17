@@ -19,29 +19,33 @@ impl<DE> From<io::Error> for WriteError<DE> {
 
 pub trait DirectiveHandler {
     type DirectiveError;
-    fn handle<W>(&self, context:&TemplateContext, command: &str, children: &[Node], writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write;
+    fn handle<W>(&self, context:&TemplateContext, command: &str, children: &[Node], base_indent: usize, indent_size: usize, writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write;
 }
 
-pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, indent: usize, directive_handler:&DH) -> Result<(), WriteError<DH::DirectiveError>>
+pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, base_indent: usize, indent_size: usize, directive_handler:&DH) -> Result<(), WriteError<DH::DirectiveError>>
     where W : Write, DH: DirectiveHandler {
     for node in nodes {
-//        for _ in 0..indent {
-//            writer.write(b" ")?;
-//        }
+        if node.should_indent() {
+            for _ in 0..base_indent {
+                writer.write(b" ")?;
+            }
+        }
+
         match node {
             &Node::Doctype(ref doctype) => {
                 let out = format!("<!DOCTYPE {}>\n", doctype);
                 writer.write(out.as_bytes())?;
+                writer.write(b"\n")?;
             }
             &Node::Directive { ref command, ref children } => {
                 println!("handle directive -> {:?} children {:?}", command, children);
-                directive_handler.handle(context, command, children, writer).map_err(WriteError::DirectiveError)?;
+                directive_handler.handle(context, command, children, base_indent, indent_size, writer).map_err(WriteError::DirectiveError)?;
             }
             &Node::Text(ref text) => {
 //                let out = escape_html(text).expect("escaped text");
 //                writer.write(out.as_bytes())?;
                 writer.write(text.as_bytes())?;
-//                writer.write(b"\n")?;
+                writer.write(b"\n")?;
             },
             &Node::RawText(ref raw_text) => {
                 writer.write(raw_text.as_bytes())?;
@@ -62,15 +66,17 @@ pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, 
                     format!("<{} {}{}>", element.name, attributes.join(" "), trailing_slash)
                 };
                 writer.write(open_tag.as_bytes())?;
+                writer.write(b"\n")?;
                 if seperate_close_tag {
-                    write_out(element.children.as_slice(), context, writer, indent + 2, directive_handler)?;
+                    write_out(element.children.as_slice(), context, writer, base_indent + indent_size, indent_size, directive_handler)?;
                     let closing_tag : String = format!("</{}>", element.name);
-//                    for _ in 0..indent {
-//                        writer.write(b" ")?;
-//                    }
+                    for _ in 0..base_indent {
+                        writer.write(b" ")?;
+                    }
                     writer.write(closing_tag.as_bytes())?;
-//                    writer.write(b"\n")?;
+                    writer.write(b"\n")?;
                 }
+
             },
         }
     }

@@ -30,7 +30,8 @@ pub struct DirectivePrinter {}
 
 impl templar::output::DirectiveHandler for DirectivePrinter {
     type DirectiveError = String;
-    fn handle<W>(&self, context: &TemplateContext, command: &str, children: &[Node], _: &mut W) -> Result<(), Self::DirectiveError> where W : Write {
+    #[allow(unused_variables)]
+    fn handle<W>(&self, context: &TemplateContext, command: &str, children: &[Node], base_indent:usize, indent_size: usize, _: &mut W) -> Result<(), Self::DirectiveError> where W : Write {
         println!("handle directive -> {:?}, children -> {:?}", command, children.len());
         Ok(())
     }
