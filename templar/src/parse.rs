@@ -94,6 +94,14 @@ named!(directive_line<&str, LineContent>,
     )
 );
 
+named!(comment_line<&str, LineContent>,
+    do_parse!(
+        tag!("/") >>
+        rr : rest >>
+        ( LineContent::Comment(rr.trim().to_string()))
+    )
+);
+
 named!(doctype_line<&str, LineContent>,
     do_parse!(
         tag!("doctype") >>
@@ -153,7 +161,7 @@ named!(class_id_only_line<&str, LineContent>,
 );
 
 named!(line_p<&str, LineContent>,
-    alt_complete!(doctype_line | javascript_line | tag_element_line | class_id_only_line | directive_line | text_line)
+    alt_complete!(doctype_line | comment_line | javascript_line | tag_element_line | class_id_only_line | directive_line | text_line)
 );
 
 #[derive(Debug)]
@@ -172,6 +180,7 @@ struct HtmlElement {
 
 #[derive(Debug)]
 enum LineContent {
+    Comment(String),
     Javascript,
     Doctype(String),
     Element(HtmlElement),
@@ -324,6 +333,9 @@ pub fn parse(content:&str) -> ParseResult {
                         },
                         (ParseMode::Normal, content) => {
                             match content {
+                                LineContent::Comment(_) => {
+                                    // ignore
+                                },
                                 LineContent::Javascript => {
 //                                    println!("!javasript element, startin javascript mode");
                                     let mut ele = element("script", vec![("type", "text/javascript")]);
