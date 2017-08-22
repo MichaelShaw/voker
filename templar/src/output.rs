@@ -45,13 +45,16 @@ pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, 
 //                let out = escape_html(text).expect("escaped text");
 //                writer.write(out.as_bytes())?;
                 writer.write(text.as_bytes())?;
-                writer.write(b"\n")?;
+                if indent_size > 0 {
+                    writer.write(b"\n")?;
+                }
             },
             &Node::RawText(ref raw_text) => {
                 writer.write(raw_text.as_bytes())?;
                 writer.write(b"\n")?;
             },
             &Node::Element(ref element) => {
+                let destroy_whitespace = element.name == "a";
                 let seperate_close_tag = element.children.len() > 0 || element.name == "script" || element.name == "a";
                 let trailing_slash : &str = if !seperate_close_tag { " /" } else { "" };
 
@@ -66,15 +69,27 @@ pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, 
                     format!("<{} {}{}>", element.name, attributes.join(" "), trailing_slash)
                 };
                 writer.write(open_tag.as_bytes())?;
-                writer.write(b"\n")?;
+                if indent_size > 0 && !destroy_whitespace {
+                    writer.write(b"\n")?;
+                }
                 if seperate_close_tag {
-                    write_out(element.children.as_slice(), context, writer, base_indent + indent_size, indent_size, directive_handler)?;
+                    if destroy_whitespace {
+                        write_out(element.children.as_slice(), context, writer, 0, 0, directive_handler)?;
+                    } else {
+                        write_out(element.children.as_slice(), context, writer, base_indent + indent_size, indent_size, directive_handler)?;
+                    }
+
                     let closing_tag : String = format!("</{}>", element.name);
-                    for _ in 0..base_indent {
-                        writer.write(b" ")?;
+                    if !destroy_whitespace {
+                        for _ in 0..base_indent {
+                            writer.write(b" ")?;
+                        }
                     }
                     writer.write(closing_tag.as_bytes())?;
-                    writer.write(b"\n")?;
+                    if indent_size > 0 {
+                        writer.write(b"\n")?;
+                    }
+
                 }
 
             },
