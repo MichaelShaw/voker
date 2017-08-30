@@ -7,6 +7,7 @@ use server;
 use watch;
 use build_feedback;
 use std::thread;
+use std::net::SocketAddr;
 
 const USAGE: &'static str = "
 Voker Static Site Gen
@@ -22,12 +23,12 @@ Usage:
 Options:
   -h --help             Show this screen.
   --version             Show version.
-  --bind=<ip_port>      Serve address [default: localhost:3000]
+  --bind=<ip_port>      Serve address [default: 127.0.0.1:3000]
 ";
 
 #[derive(Debug, Deserialize)]
 struct Args {
-    flag_bind: String,
+    flag_bind: SocketAddr,
     arg_name: Option<String>,
     cmd_serve: bool,
     cmd_build: bool,
@@ -59,7 +60,7 @@ pub fn run_docopt() -> io::Result<()> {
             let server_root = dest.clone();
             let _ = thread::spawn(move || {
                 let server_config = server::ServerConfig {
-                    addr: address.parse().unwrap(),
+                    addr: address,
                     root_dir: server_root,
                     num_file_threads: 4,
                     num_server_threads: 4,
