@@ -22,6 +22,13 @@ pub trait DirectiveHandler {
     fn handle<W>(&self, context:&TemplateContext, command: &str, children: &[Node], base_indent: usize, indent_size: usize, writer: &mut W) -> Result<(), Self::DirectiveError> where W : Write;
 }
 
+pub fn should_destroy_whitespace(tag_name: &str) -> bool {
+    match tag_name {
+        "a" | "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "td" | "li" => true,
+        _ => false,
+    }
+}
+
 pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, base_indent: usize, indent_size: usize, directive_handler:&DH) -> Result<(), WriteError<DH::DirectiveError>>
     where W : Write, DH: DirectiveHandler {
     for node in nodes {
@@ -54,7 +61,7 @@ pub fn write_out<W, DH>(nodes:&[Node], context:&TemplateContext, writer:&mut W, 
                 writer.write(b"\n")?;
             },
             &Node::Element(ref element) => {
-                let destroy_whitespace = element.name == "a";
+                let destroy_whitespace = should_destroy_whitespace(&element.name);
                 let seperate_close_tag = element.children.len() > 0 || element.name == "script" || element.name == "a";
                 let trailing_slash : &str = if !seperate_close_tag { " /" } else { "" };
 

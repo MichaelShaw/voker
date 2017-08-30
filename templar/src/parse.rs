@@ -72,7 +72,7 @@ named!(key_value_pair<&str, (String, String)>,
 named!(text_line<&str, LineContent>,
     do_parse!(
         tag!("|") >>
-        rr: map!(rest, |s| s.trim() ) >>
+        rr: map!(rest, |s| s.trim_left() ) >>
         ( LineContent::Text(rr.to_string()) )
     )
 );
@@ -132,7 +132,7 @@ named!(tag_element_line<&str, LineContent>,
                 tag: Some(tag.to_string()),
                 classes_ids: class_ids,
                 attributes: kvps,
-                inner_text: noneify_blank_string(rr.trim()),
+                inner_text: noneify_blank_string(rr.trim_left()),
           })
         )
     )
@@ -152,7 +152,7 @@ named!(class_id_only_line<&str, LineContent>,
                 tag: None,
                 classes_ids: class_ids,
                 attributes: kvps,
-                inner_text: noneify_blank_string(rr.trim()),
+                inner_text: noneify_blank_string(rr.trim_left()),
           })
         )
     )

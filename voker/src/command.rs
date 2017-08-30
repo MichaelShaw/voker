@@ -13,19 +13,21 @@ Voker Static Site Gen
 
 Usage:
   voker serve
-  voker serve <name>
+  voker serve <name> [--bind=<ip_port>]
   voker build
   voker build <name>
   voker (-h | --help)
   voker --version
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
+  -h --help             Show this screen.
+  --version             Show version.
+  --bind=<ip_port>      Serve address [default: localhost:3000]
 ";
 
 #[derive(Debug, Deserialize)]
 struct Args {
+    flag_bind: String,
     arg_name: Option<String>,
     cmd_serve: bool,
     cmd_build: bool,
@@ -37,7 +39,11 @@ pub fn run_docopt() -> io::Result<()> {
         .and_then(|d| d.deserialize())
         .unwrap_or_else(|e| e.exit());
 
+    println!("address -> {:?}", args);
+
     let current_directory = env::current_dir()?;
+
+    let address = args.flag_bind.clone();
 
 //    println!("current dir -> {:?}", current_directory);
 
@@ -51,9 +57,9 @@ pub fn run_docopt() -> io::Result<()> {
 //            println!("serve ... building -> {:?} @ {:?}", source, dest);
 
             let server_root = dest.clone();
-            let _ = thread::spawn(|| {
+            let _ = thread::spawn(move || {
                 let server_config = server::ServerConfig {
-                    addr: "127.0.0.1:3000".parse().unwrap(),
+                    addr: address.parse().unwrap(),
                     root_dir: server_root,
                     num_file_threads: 4,
                     num_server_threads: 4,
